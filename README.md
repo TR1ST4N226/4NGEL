@@ -2,8 +2,6 @@
 
 # 4NGEL
 
-<img src="https://raw.githubusercontent.com/TR1ST4N226/4NGEL/main/assets/logo.png" alt="4NGEL Logo" width="200"/>
-
 **CLI video downloader with a beautiful Terminal User Interface**
 
 [![MIT License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
