@@ -363,11 +363,9 @@ export async function download(
 
   const args: string[] = [];
 
-  if (infoJsonPath && existsSync(infoJsonPath)) {
-    args.push("--load-info-json", infoJsonPath);
-  } else {
-    args.push(url);
-  }
+  // The probe JSON contains signed media URLs which can expire before the
+  // user selects a format. Re-extract from the page so yt-dlp gets fresh URLs.
+  args.push(url);
 
   args.push(...choice.args);
 
@@ -377,6 +375,9 @@ export async function download(
     "--newline",
     "--no-quiet",
     "--no-simulate",
+    "--retries", "3",
+    "--fragment-retries", "3",
+    "--extractor-retries", "3",
     "--progress",
     "--progress-template",
     `download:${["downloaded_bytes", "total_bytes", "total_bytes_estimate", "speed", "eta"].join("|")}`,
