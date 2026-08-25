@@ -20,7 +20,11 @@ const require = createRequire(import.meta.url);
 const APP_NAME = "4ngel";
 const BIN_DIR = join(homedir(), ".config", APP_NAME, "bin");
 const BIN_PATH = join(BIN_DIR, process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
-const YOUTUBE_EXTRACTOR_ARGS = ["--extractor-args", "youtube:player_client=android"];
+export const YOUTUBE_CLIENTS = ["android_vr", "web", "web_safari", "android"] as const;
+
+function youtubeExtractorArgs(clientList: string): string[] {
+  return ["--extractor-args", `youtube:player_client=${clientList}`];
+}
 
 // Types pour les métadonnées
 export type VideoFormat = {
@@ -193,7 +197,13 @@ export async function probe(
   const tempFile = join(tmpdir(), `${APP_NAME}-info-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.json`);
 
   return new Promise((resolve, reject) => {
-    const args = ["-J", "--no-playlist", "--no-warnings", ...YOUTUBE_EXTRACTOR_ARGS, url];
+    const args = [
+      "-J",
+      "--no-playlist",
+      "--no-warnings",
+      ...youtubeExtractorArgs(YOUTUBE_CLIENTS.join(",")),
+      url,
+    ];
 
     const child = spawn(ytdlp, args, {
       signal,
@@ -353,6 +363,7 @@ export async function download(
     infoJsonPath?: string;
     choice: DownloadChoice;
     outDir: string;
+    youtubeClient?: string;
   },
   handlers: DownloadHandlers,
   signal?: AbortSignal
@@ -376,7 +387,7 @@ export async function download(
     "--newline",
     "--no-quiet",
     "--no-simulate",
-    ...YOUTUBE_EXTRACTOR_ARGS,
+    ...youtubeExtractorArgs(options.youtubeClient ?? YOUTUBE_CLIENTS.join(",")),
     "--retries", "3",
     "--fragment-retries", "3",
     "--extractor-retries", "3",

@@ -26,6 +26,7 @@ import {
   type DownloadChoice,
   type DownloadProgress,
   type VideoInfo,
+  YOUTUBE_CLIENTS,
 } from './lib/ytdlp.js'
 
 const OUT_DIR = path.join(os.homedir(), 'Downloads')
@@ -244,16 +245,35 @@ function AppContent({
       try {
         const ffmpegLocation = await findFfmpeg()
         const base = { ytdlp: ytdlpRef.current, ffmpegLocation, url, choice, outDir: OUT_DIR }
-        let filepath: string
-        try {
-          filepath = await download({ ...base, infoJsonPath: infoJsonRef.current }, handlers, controller.signal)
-        } catch (error) {
-          if (controller.signal.aborted) throw error
-          setPhase(prev =>
-            prev.name === 'downloading' ? { ...prev, progress: undefined, refreshing: true } : prev,
-          )
-          filepath = await download(base, handlers, controller.signal)
+        let filepath: string | undefined
+        const clients = platform?.key === 'youtube' ? [...YOUTUBE_CLIENTS] : [undefined]
+        let lastError: unknown
+
+        for (const [index, youtubeClient] of clients.entries()) {
+          if (index > 0) {
+            setPhase(prev =>
+              prev.name === 'downloading' ? { ...prev, progress: undefined, refreshing: true } : prev,
+            )
+          }
+
+          try {
+            filepath = await download(
+              {
+                ...base,
+                infoJsonPath: index === 0 ? infoJsonRef.current : undefined,
+                youtubeClient,
+              },
+              handlers,
+              controller.signal,
+            )
+            break
+          } catch (error) {
+            lastError = error
+            if (controller.signal.aborted || index === clients.length - 1) throw error
+          }
         }
+
+        if (!filepath) throw lastError ?? new Error('Download failed')
         onOutcome({ filepath })
         setHistory(addToHistory(url))
         setPhase({ name: 'done', filepath })
