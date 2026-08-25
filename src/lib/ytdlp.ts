@@ -20,7 +20,7 @@ const require = createRequire(import.meta.url);
 const APP_NAME = "4ngel";
 const BIN_DIR = join(homedir(), ".config", APP_NAME, "bin");
 const BIN_PATH = join(BIN_DIR, process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
-export const YOUTUBE_CLIENTS = ["android_vr", "web", "web_safari", "android"] as const;
+export const YOUTUBE_CLIENTS = ["web_embedded", "android_vr", "web_safari", "android"] as const;
 
 function youtubeExtractorArgs(clientList: string): string[] {
   return ["--extractor-args", `youtube:player_client=${clientList}`];
