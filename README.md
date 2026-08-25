@@ -74,6 +74,20 @@ Double-click `4ngel.bat` (Windows) or run:
 4ngel.bat
 ```
 
+### YouTube cookies (optional)
+
+Some YouTube videos require a signed-in browser session for formats above 360p.
+Set `YT_DLP_COOKIES_FROM_BROWSER` before launching 4NGEL. For Opera GX, close
+the browser first and use its Chromium profile path:
+
+```powershell
+$env:YT_DLP_COOKIES_FROM_BROWSER = "chromium:$env:APPDATA\Opera Software\Opera GX Stable\Default"
+.\4ngel.bat
+```
+
+Other supported values include `chrome`, `edge`, `firefox`, `opera`, and
+`vivaldi`. Cookies stay on the local machine and are never stored in the repo.
+
 ---
 
 ## 🎮 Keyboard Shortcuts

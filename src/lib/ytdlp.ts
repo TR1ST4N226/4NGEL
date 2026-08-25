@@ -26,6 +26,11 @@ function youtubeExtractorArgs(clientList: string): string[] {
   return ["--extractor-args", `youtube:player_client=${clientList}`];
 }
 
+function cookiesFromBrowserArgs(): string[] {
+  const browser = process.env.YT_DLP_COOKIES_FROM_BROWSER?.trim();
+  return browser ? ["--cookies-from-browser", browser] : [];
+}
+
 // Types pour les métadonnées
 export type VideoFormat = {
   format_id: string;
@@ -202,6 +207,7 @@ export async function probe(
       "--no-playlist",
       "--no-warnings",
       ...youtubeExtractorArgs(YOUTUBE_CLIENTS.join(",")),
+      ...cookiesFromBrowserArgs(),
       url,
     ];
 
@@ -388,6 +394,7 @@ export async function download(
     "--no-quiet",
     "--no-simulate",
     ...youtubeExtractorArgs(options.youtubeClient ?? YOUTUBE_CLIENTS.join(",")),
+    ...cookiesFromBrowserArgs(),
     "--retries", "3",
     "--fragment-retries", "3",
     "--extractor-retries", "3",
