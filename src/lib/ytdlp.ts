@@ -323,8 +323,8 @@ export function buildChoices(info: VideoInfo): DownloadChoice[] {
       const isMuxed = best.acodec && best.acodec !== "none";
 
       const formatArg = isMuxed
-        ? `b[height=${height}]/bv*[height<=${height}]+ba/b`
-        : `bv*[height=${height}]+ba/b[height=${height}]/b[height=${height}]/bv*[height<=${height}]+ba/b`;
+        ? `b[height=${height}]/bv*[height=${height}]+ba`
+        : `bv*[height=${height}]+ba/b[height=${height}]`;
 
       let estimatedSize = best.filesize || best.filesize_approx || 0;
       if (!isMuxed && bestAudio?.filesize) {
