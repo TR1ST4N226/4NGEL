@@ -5,7 +5,7 @@ echo  4NGEL - Video Downloader
 echo ========================================
 echo.
 
-node "%~dp0bin\4ngel.js" %*
+node "%~dp0dist\cli.js" %*
 
 echo.
 echo ========================================
