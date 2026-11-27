@@ -76,17 +76,25 @@ Double-click `4ngel.bat` (Windows) or run:
 
 ### YouTube cookies (optional)
 
-Some YouTube videos require a signed-in browser session for formats above 360p.
-Set `YT_DLP_COOKIES_FROM_BROWSER` before launching 4NGEL. For Opera GX, close
-the browser first and use its Chromium profile path:
+The Windows launcher automatically uses the default Opera GX profile when it
+finds one. For another supported browser, set `YT_DLP_COOKIES_FROM_BROWSER`
+before launching 4NGEL. To save that choice for future terminals, run this once
+in PowerShell (replace `chrome` with `edge`, `firefox`, or another yt-dlp browser):
 
 ```powershell
-$env:YT_DLP_COOKIES_FROM_BROWSER = "chromium:$env:APPDATA\Opera Software\Opera GX Stable\Default"
-.\4ngel.bat
+[Environment]::SetEnvironmentVariable("YT_DLP_COOKIES_FROM_BROWSER", "chrome", "User")
 ```
 
-Other supported values include `chrome`, `edge`, `firefox`, `opera`, and
-`vivaldi`. Cookies stay on the local machine and are never stored in the repo.
+Open a new terminal after setting it. Cookies stay on the local machine and are
+never stored in the repo. Install [Deno](https://deno.com/) so yt-dlp can solve
+YouTube JavaScript challenges. Some age-restricted videos may still require a
+PO Token Provider.
+
+### yt-dlp updates
+
+4NGEL checks its managed yt-dlp binary for updates once every 24 hours and
+automatically installs the latest stable version. If yt-dlp is found on `PATH`,
+it is managed externally and should be updated with its package manager.
 
 ---
 

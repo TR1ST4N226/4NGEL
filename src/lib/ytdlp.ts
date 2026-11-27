@@ -8,7 +8,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { createRequire } from "node:module";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 // Importer formatBytes depuis notre module
 import { formatBytes } from "./format.js";
@@ -20,7 +20,10 @@ const require = createRequire(import.meta.url);
 const APP_NAME = "4ngel";
 const BIN_DIR = join(homedir(), ".config", APP_NAME, "bin");
 const BIN_PATH = join(BIN_DIR, process.platform === "win32" ? "yt-dlp.exe" : "yt-dlp");
-export const YOUTUBE_CLIENTS = ["web_embedded", "android_vr", "web_safari", "android"] as const;
+const UPDATE_CHECK_PATH = join(BIN_DIR, "yt-dlp-update-check.json");
+const UPDATE_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const UPDATE_RETRY_INTERVAL_MS = 60 * 60 * 1000;
+export const YOUTUBE_CLIENTS = ["tv_samsung", "web_embedded", "android_vr", "web_safari", "android"] as const;
 
 function youtubeExtractorArgs(clientList: string): string[] {
   return ["--extractor-args", `youtube:player_client=${clientList}`];
@@ -143,20 +146,73 @@ async function downloadYtDlp(
   return BIN_PATH;
 }
 
+async function updateManagedYtDlp(
+  ytdlp: string,
+  onStatus?: (msg: string) => void,
+  signal?: AbortSignal
+): Promise<string> {
+  const now = Date.now();
+  let lastCheck: { checkedAt: number; succeeded: boolean } | undefined;
+
+  if (existsSync(UPDATE_CHECK_PATH)) {
+    try {
+      lastCheck = JSON.parse(await readFile(UPDATE_CHECK_PATH, "utf-8")) as {
+        checkedAt: number;
+        succeeded: boolean;
+      };
+    } catch (error) {
+      onStatus?.(`Could not read yt-dlp update schedule: ${error}`);
+    }
+  }
+
+  const interval = lastCheck?.succeeded ? UPDATE_CHECK_INTERVAL_MS : UPDATE_RETRY_INTERVAL_MS;
+  if (lastCheck && Number.isFinite(lastCheck.checkedAt) && now - lastCheck.checkedAt < interval) {
+    return ytdlp;
+  }
+
+  onStatus?.("Checking for yt-dlp updates...");
+
+  let updateError: unknown;
+  let version = "";
+  try {
+    await execFileAsync(ytdlp, ["-U"], { timeout: 120_000, signal, windowsHide: true });
+    const result = await execFileAsync(ytdlp, ["--version"], { timeout: 5_000, signal, windowsHide: true });
+    version = result.stdout.trim();
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    updateError = error;
+  }
+
+  const succeeded = updateError === undefined;
+  try {
+    await writeFile(UPDATE_CHECK_PATH, JSON.stringify({ checkedAt: Date.now(), succeeded }), "utf-8");
+  } catch (error) {
+    onStatus?.(`Could not save yt-dlp update schedule: ${error}`);
+  }
+
+  if (succeeded) {
+    onStatus?.(`yt-dlp is up to date (${version})`);
+  } else {
+    onStatus?.(`yt-dlp update failed; using current version: ${updateError}`);
+  }
+
+  return ytdlp;
+}
+
 // --- ensureYtDlp : trouve ou installe ---
 export async function ensureYtDlp(
   onStatus?: (msg: string) => void,
   signal?: AbortSignal
 ): Promise<string> {
   onStatus?.("Checking for yt-dlp...");
-  if (await commandWorks("yt-dlp")) {
-    onStatus?.("Found yt-dlp on PATH");
-    return "yt-dlp";
+  if (existsSync(BIN_PATH) && await commandWorks(BIN_PATH)) {
+    onStatus?.("Found managed yt-dlp");
+    return updateManagedYtDlp(BIN_PATH, onStatus, signal);
   }
 
-  if (existsSync(BIN_PATH) && await commandWorks(BIN_PATH)) {
-    onStatus?.("Found bundled yt-dlp");
-    return BIN_PATH;
+  if (await commandWorks("yt-dlp")) {
+    onStatus?.("Found yt-dlp on PATH; update it with your package manager");
+    return "yt-dlp";
   }
 
   return downloadYtDlp(onStatus, signal);
