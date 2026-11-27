@@ -81,6 +81,8 @@ export type DownloadProgress = {
 export type DownloadHandlers = {
   onProgress: (progress: DownloadProgress) => void;
   onProcessing: (message: string) => void;
+  onStatus?: (message: string) => void;
+  onCookiesUnavailable?: () => void;
 };
 
 // --- URL de téléchargement selon la plateforme ---
@@ -249,11 +251,18 @@ function cleanYtDlpError(stderr: string): string {
   return lastError.replace(/^ERROR:\s*\[[^\]]+\]\s*/, "");
 }
 
+function isBrowserCookieDatabaseCopyError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return /could not copy .* cookies? database/i.test(message);
+}
+
 // --- probe : extraction des métadonnées ---
 export async function probe(
   ytdlp: string,
   url: string,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  useBrowserCookies = true,
+  onStatus?: (message: string) => void
 ): Promise<{ info: VideoInfo; infoJsonPath: string }> {
   const tempFile = join(tmpdir(), `${APP_NAME}-info-${Date.now()}-${Math.random().toString(36).slice(2, 6)}.json`);
 
@@ -263,7 +272,7 @@ export async function probe(
       "--no-playlist",
       "--no-warnings",
       ...youtubeExtractorArgs(YOUTUBE_CLIENTS.join(",")),
-      ...cookiesFromBrowserArgs(),
+      ...(useBrowserCookies ? cookiesFromBrowserArgs() : []),
       url,
     ];
 
@@ -286,7 +295,13 @@ export async function probe(
     child.on("close", async (code) => {
       if (code !== 0) {
         const errorMsg = cleanYtDlpError(stderr);
-        reject(new Error(`yt-dlp failed: ${errorMsg}`));
+        const error = new Error(`yt-dlp failed: ${errorMsg}`);
+        if (useBrowserCookies && !signal?.aborted && isBrowserCookieDatabaseCopyError(error)) {
+          onStatus?.("Browser cookies are locked; retrying without them...");
+          resolve(probe(ytdlp, url, signal, false, onStatus));
+          return;
+        }
+        reject(error);
         return;
       }
 
@@ -426,6 +441,7 @@ export async function download(
     choice: DownloadChoice;
     outDir: string;
     youtubeClient?: string;
+    useBrowserCookies?: boolean;
   },
   handlers: DownloadHandlers,
   signal?: AbortSignal
@@ -450,7 +466,7 @@ export async function download(
     "--no-quiet",
     "--no-simulate",
     ...youtubeExtractorArgs(options.youtubeClient ?? YOUTUBE_CLIENTS.join(",")),
-    ...cookiesFromBrowserArgs(),
+    ...(options.useBrowserCookies === false ? [] : cookiesFromBrowserArgs()),
     "--retries", "3",
     "--fragment-retries", "3",
     "--extractor-retries", "3",
@@ -571,7 +587,18 @@ export async function download(
 
       if (code !== 0) {
         const errorMsg = cleanYtDlpError(stderr);
-        reject(new Error(`Download failed: ${errorMsg}`));
+        const error = new Error(`Download failed: ${errorMsg}`);
+        if (
+          options.useBrowserCookies !== false &&
+          isBrowserCookieDatabaseCopyError(error) &&
+          !signal?.aborted
+        ) {
+          handlers.onStatus?.("Browser cookies are locked; retrying without them...");
+          handlers.onCookiesUnavailable?.();
+          void download({ ...options, useBrowserCookies: false }, handlers, signal).then(resolve, reject);
+          return;
+        }
+        reject(error);
         return;
       }
 

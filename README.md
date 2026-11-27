@@ -90,7 +90,8 @@ in PowerShell (replace `chrome` with `edge`, `firefox`, or another yt-dlp browse
 Open a new terminal after setting it. Cookies stay on the local machine and are
 never stored in the repo. Install [Deno](https://deno.com/) so yt-dlp can solve
 YouTube JavaScript challenges. Some age-restricted videos may still require a
-PO Token Provider.
+PO Token Provider. If the browser cookie database is locked, 4NGEL retries
+without cookies; close Opera GX first when you need its signed-in session.
 
 ### yt-dlp updates
 

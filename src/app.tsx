@@ -72,6 +72,7 @@ type Phase =
       progress?: DownloadProgress
       processing: boolean
       refreshing?: boolean
+      status?: string
     }
   | { name: 'done'; filepath: string }
   | { name: 'error'; message: string }
@@ -139,6 +140,7 @@ function AppContent({
   const highlightRef = useRef(0)
   const infoJsonRef = useRef<string | undefined>(undefined)
   const abortRef = useRef<AbortController | undefined>(undefined)
+  const browserCookiesRef = useRef(true)
   const [phase, setPhase] = useState<Phase>(initialUrl ? { name: 'probing', status: 'warming up…' } : { name: 'input' })
 
   const columns = stdout?.columns && stdout.columns > 0 ? stdout.columns : 80
@@ -148,6 +150,7 @@ function AppContent({
   const startProbe = useCallback(async (targetUrl: string) => {
     const controller = new AbortController()
     abortRef.current = controller
+    browserCookiesRef.current = true
     setPlatform(detectPlatform(targetUrl))
     setPhase({ name: 'probing', status: 'warming up…' })
     try {
@@ -157,7 +160,16 @@ function AppContent({
       ytdlpRef.current = ytdlp
       if (controller.signal.aborted) return
       setPhase({ name: 'probing', status: 'fetching video info…' })
-      const { info: videoInfo, infoJsonPath } = await probe(ytdlp, targetUrl, controller.signal)
+      const { info: videoInfo, infoJsonPath } = await probe(
+        ytdlp,
+        targetUrl,
+        controller.signal,
+        true,
+        status => {
+          browserCookiesRef.current = false
+          setPhase({ name: 'probing', status })
+        },
+      )
       if (controller.signal.aborted) return
       infoJsonRef.current = infoJsonPath
       setInfo(videoInfo)
@@ -238,9 +250,20 @@ function AppContent({
     void (async () => {
       const handlers = {
         onProgress: (progress: DownloadProgress) =>
-          setPhase(prev => (prev.name === 'downloading' ? { ...prev, progress, processing: false } : prev)),
+          setPhase(prev =>
+            prev.name === 'downloading'
+              ? { ...prev, progress, processing: false, status: undefined }
+              : prev,
+          ),
         onProcessing: () =>
-          setPhase(prev => (prev.name === 'downloading' ? { ...prev, processing: true } : prev)),
+          setPhase(prev =>
+            prev.name === 'downloading' ? { ...prev, processing: true, status: undefined } : prev,
+          ),
+        onStatus: (status: string) =>
+          setPhase(prev => (prev.name === 'downloading' ? { ...prev, status } : prev)),
+        onCookiesUnavailable: () => {
+          browserCookiesRef.current = false
+        },
       }
       try {
         const ffmpegLocation = await findFfmpeg()
@@ -262,6 +285,7 @@ function AppContent({
                 ...base,
                 infoJsonPath: index === 0 ? infoJsonRef.current : undefined,
                 youtubeClient,
+                useBrowserCookies: browserCookiesRef.current,
               },
               handlers,
               controller.signal,
@@ -412,7 +436,8 @@ function AppContent({
                     <Spinner type="dots" />
                   </Text>
                   <Text color={theme.gray} dimColor={theme.dimSecondary}>
-                    {phase.refreshing ? ' link expired — grabbing a fresh one…' : ' starting download…'}
+                    {phase.status ??
+                      (phase.refreshing ? ' link expired — grabbing a fresh one…' : ' starting download…')}
                   </Text>
                 </Text>
               </>
