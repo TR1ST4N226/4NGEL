@@ -1,7 +1,7 @@
-@"
 node_modules/
 dist/
 bin/
+artifacts/
 *.exe
 *.log
 .pkg-cache/
@@ -13,4 +13,3 @@ Thumbs.db
 *.swo
 .vscode/
 .idea/
-"@ | Out-File -FilePath .gitignore -Encoding utf8

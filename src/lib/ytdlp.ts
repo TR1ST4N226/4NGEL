@@ -8,7 +8,7 @@ import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { createRequire } from "node:module";
-import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 
 // Importer formatBytes depuis notre module
 import { formatBytes } from "./format.js";
@@ -209,6 +209,14 @@ export async function ensureYtDlp(
   onStatus?.("Checking for yt-dlp...");
   if (existsSync(BIN_PATH) && await commandWorks(BIN_PATH)) {
     onStatus?.("Found managed yt-dlp");
+    return updateManagedYtDlp(BIN_PATH, onStatus, signal);
+  }
+
+  const bundledYtDlp = process.env.ANGEL_BUNDLED_YTDLP?.trim();
+  if (bundledYtDlp && await commandWorks(bundledYtDlp)) {
+    await mkdir(BIN_DIR, { recursive: true });
+    await copyFile(bundledYtDlp, BIN_PATH);
+    onStatus?.("Installed bundled yt-dlp");
     return updateManagedYtDlp(BIN_PATH, onStatus, signal);
   }
 

@@ -44,9 +44,35 @@
 
 ## 🚀 Quick Start
 
+### Windows portable release
+
+For the easiest setup, download `4NGEL-Portable-Windows-x64-vX.Y.Z.zip` from
+[GitHub Releases](https://github.com/TR1ST4N226/4NGEL/releases), extract it, and
+double-click `4NGEL.exe`. The launcher displays the included custom icon and
+starts `4ngel.bat`. No separate Node.js or npm installation is required.
+The portable archive supports 64-bit Windows only and does not require
+administrator access.
+
+You can also run `4ngel.bat` directly, including with a URL argument.
+
+The archive includes the Node.js runtime, production dependencies, FFmpeg,
+yt-dlp, and Deno. On first launch, 4NGEL copies the bundled yt-dlp into your
+user profile and then checks for updates automatically. An internet connection
+is still required for yt-dlp updates and media downloads. Browser cookies are
+read from your local browser profile and are never included in the archive.
+Runtime versions and third-party notices are included in the extracted folder.
+
+The portable ZIP is built and attached automatically after a GitHub Release is
+published; allow the release workflow a few minutes to finish before looking for
+the ZIP asset.
+
 ### Prerequisites
 
+These prerequisites apply only when building or running the source archive:
+
 - **Node.js** >= 18.0.0 ([Download](https://nodejs.org/))
+- **.NET Framework C# compiler** to generate the iconed `4NGEL.exe` launcher;
+  if unavailable, the source version remains usable through `4ngel.bat`.
 
 ### Installation
 
@@ -64,12 +90,14 @@ npm run build
 
 ### Usage
 
-Double-click `4ngel.bat` (Windows). On the first launch from a source download,
-the launcher installs dependencies and builds the CLI automatically. You can
-also run:
+For a source download, double-click `4ngel.bat` (Windows). On first launch, the
+launcher installs dependencies, builds the CLI, and creates `4NGEL.exe` with
+the included icon. After setup, you can double-click `4NGEL.exe` for normal
+launches. This requires Node.js >= 18, the .NET Framework C# compiler, and an
+internet connection. You can also run:
 
 ```bash
-# With a URL directly
+# With a URL directly (the batch launcher accepts arguments)
 4ngel.bat https://youtube.com/watch?v=...
 
 # Without a URL (you'll be prompted)
@@ -88,7 +116,8 @@ in PowerShell (replace `chrome` with `edge`, `firefox`, or another yt-dlp browse
 ```
 
 Open a new terminal after setting it. Cookies stay on the local machine and are
-never stored in the repo. Install [Deno](https://deno.com/) so yt-dlp can solve
+never stored in the repo. The portable Windows archive includes Deno. Source
+installs need [Deno](https://deno.com/) installed separately so yt-dlp can solve
 YouTube JavaScript challenges. Some age-restricted videos may still require a
 PO Token Provider. If the browser cookie database is locked, 4NGEL retries
 without cookies; close Opera GX first when you need its signed-in session.
@@ -98,6 +127,8 @@ without cookies; close Opera GX first when you need its signed-in session.
 4NGEL checks its managed yt-dlp binary for updates once every 24 hours and
 automatically installs the latest stable version. If yt-dlp is found on `PATH`,
 it is managed externally and should be updated with its package manager.
+In the portable Windows archive, the bundled yt-dlp is copied to 4NGEL's user
+data folder on first use; subsequent daily checks update that managed copy.
 
 ---
 
@@ -136,7 +167,14 @@ npm run build
 
 # Type check
 npm run typecheck
+
+# Build the self-contained Windows x64 ZIP (Windows only)
+npm run package:windows
 ```
+
+The portable ZIP is written to `artifacts/`. It bundles the Node.js runtime,
+production npm dependencies, FFmpeg, yt-dlp, and Deno. Its included
+`portable-runtime.json` records the bundled runtime versions.
 
 ### Project Structure
 
@@ -149,6 +187,8 @@ npm run typecheck
 │   ├── components/        # UI components
 │   └── lib/               # Core libraries
 ├── 4ngel.bat              # Windows launcher
+├── scripts/               # Release packaging scripts
+├── tests/                 # Automated tests
 ├── package.json
 ├── tsconfig.json
 └── tsup.config.ts

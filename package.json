@@ -1,6 +1,6 @@
 {
   "name": "4ngel",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "A beautiful CLI video downloader with TUI",
   "type": "module",
   "bin": {
@@ -11,7 +11,8 @@
     "dev": "tsup --watch",
     "start": "node dist/cli.js",
     "test": "tsx --test tests/ytdlp.test.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "package:windows": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows.ps1"
   },
   "engines": {
     "node": ">=18"
