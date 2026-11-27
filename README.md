@@ -64,7 +64,9 @@ npm run build
 
 ### Usage
 
-Double-click `4ngel.bat` (Windows) or run:
+Double-click `4ngel.bat` (Windows). On the first launch from a source download,
+the launcher installs dependencies and builds the CLI automatically. You can
+also run:
 
 ```bash
 # With a URL directly
